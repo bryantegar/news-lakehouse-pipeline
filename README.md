@@ -34,16 +34,28 @@ kumparan.com (or fixture) -> Source DB (Postgres)          [news_scraper_hourly]
    -> DQ scorecard -> REST API (FastAPI, read-only)
 ```
 
-Two DAGs, chained (`news_scraper_hourly` triggers `news_ingestion_hourly`
-on completion) instead of racing each other on the same clock:
+Three DAGs. The first two run hourly and are chained
+(`news_scraper_hourly` triggers `news_ingestion_hourly` on completion,
+instead of racing each other on the same clock); the third runs daily:
 
 1. **`news_scraper_hourly`** — scrapes kumparan.com (or generates fixture
    data) and UPSERTs into the source OLTP DB. This is what makes the
    source DB / hard-delete trigger pattern meaningful — the scraper is a
    real source system, not just a passthrough into the lake.
+   <img width="1917" height="871" alt="Screenshot 2026-07-18 194123" src="https://github.com/user-attachments/assets/b126dec4-9fed-43ec-bb00-40f55f93824d" />
+
 2. **`news_ingestion_hourly`** — reads new/updated rows from the source
    DB (watermark on `updated_at`), lands them in the lake, cleans with
    PySpark, loads the DWH, then runs `dbt run && dbt snapshot && dbt test`.
+   <img width="1917" height="868" alt="image" src="https://github.com/user-attachments/assets/4f26b582-b300-4796-80a2-94f14df1dd0a" />
+
+3. **`news_hard_delete_sync`** — runs daily, not hourly. Reconciles hard
+   deletes the watermark-based hourly job can never see: a trigger on the
+   source DB logs every `DELETE FROM articles` to `article_deleted`, and
+   this DAG marks the matching DWH rows as deleted instead of leaving
+   stale "ghost" rows behind.
+   <img width="1917" height="870" alt="image" src="https://github.com/user-attachments/assets/c9dfcf2e-c443-4303-8430-1c62eb47e9d9" />
+
 
 ## Real scraper vs fixture
 
