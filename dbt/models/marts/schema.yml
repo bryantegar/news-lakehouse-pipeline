@@ -1,0 +1,42 @@
+version: 2
+
+sources:
+  - name: news_dwh
+    schema: news_dwh
+    tables:
+      - name: dq_scorecard
+
+models:
+  - name: fct_articles
+    description: "One row per article (grain: article_id). Fact table for the star schema."
+    columns:
+      - name: article_id
+        tests:
+          - unique
+          - not_null
+      - name: author_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_author')
+              field: author_id
+      - name: date_day
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_day
+
+  - name: dim_author
+    columns:
+      - name: author_id
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_date
+    columns:
+      - name: date_day
+        tests:
+          - unique
+          - not_null

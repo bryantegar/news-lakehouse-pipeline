@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+logs/
+*.log
+.DS_Store
+datahub_dbt_recipe.yml

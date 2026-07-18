@@ -1,0 +1,34 @@
+version: 2
+
+sources:
+  - name: news_raw
+    schema: news_raw
+    tables:
+      - name: articles_raw
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+
+models:
+  - name: stg_articles
+    description: "1:1 staging view over the raw landing table. Casts + light renames only."
+    columns:
+      - name: article_id
+        description: "Primary key, sourced from the OLTP articles.id"
+        tests:
+          - unique          # uniqueness dimension
+          - not_null        # completeness dimension
+      - name: title
+        tests:
+          - not_null        # completeness dimension
+      - name: category
+        tests:
+          - accepted_values:  # validity dimension
+              values: ['nasional', 'ekonomi', 'olahraga', 'teknologi', 'hiburan',
+                       'woman', 'mom', 'otomotif', 'food-travel', 'bolanita']
+              config:
+                severity: warn   # warn, not fail — category is nullable by design
+      - name: published_at
+        tests:
+          - not_null

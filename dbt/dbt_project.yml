@@ -1,0 +1,21 @@
+name: 'news_lakehouse'
+version: '1.0.0'
+config-version: 2
+
+profile: 'news_lakehouse'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+
+models:
+  news_lakehouse:
+    staging:
+      +materialized: view
+      +schema: news_intermediate
+    intermediate:
+      +materialized: table
+      +schema: news_intermediate
+    marts:
+      +materialized: table
+      +schema: news_mart

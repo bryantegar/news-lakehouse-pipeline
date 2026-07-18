@@ -1,0 +1,26 @@
+# Copy this file to ~/.dbt/profiles.yml (or mount it in the airflow
+# container at /home/airflow/.dbt/profiles.yml — already wired in
+# docker-compose.yml).
+#
+# --- Swapping to production BigQuery ---
+# Replace the whole "dev" target below with:
+#   type: bigquery
+#   method: service-account
+#   project: your-gcp-project
+#   dataset: news_dwh
+#   keyfile: /path/to/service-account.json
+#   threads: 4
+# No model files need to change — schema/table names are identical.
+
+news_lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DWH_DB_HOST') }}"
+      port: "{{ env_var('DWH_DB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('DWH_DB_USER') }}"
+      password: "{{ env_var('DWH_DB_PASSWORD') }}"
+      dbname: "{{ env_var('DWH_DB_NAME') }}"
+      schema: news_dwh
+      threads: 4
