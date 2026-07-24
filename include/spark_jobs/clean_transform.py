@@ -16,7 +16,9 @@ YARN/K8s cluster.
 """
 import argparse
 import json
-from pyspark.sql import SparkSession, functions as F
+
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 
 
 def get_spark(app_name: str = "news-clean-transform") -> SparkSession:

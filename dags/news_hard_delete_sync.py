@@ -8,14 +8,16 @@ matching rows in the DWH as deleted, instead of silently keeping stale
 "ghost" rows forever.
 """
 from __future__ import annotations
+
 import datetime as dt
 import sys
 
 from airflow.decorators import dag, task
 
 sys.path.append("/opt/airflow/include")
-from db import get_conn  # noqa: E402
+import dwh  # noqa: E402  — DWH operations, backend-agnostic (postgres or bigquery)
 from alerts import notify_failure  # noqa: E402
+from db import get_conn  # noqa: E402  — SOURCE DB only; always Postgres
 
 default_args = {"on_failure_callback": notify_failure}
 
@@ -37,20 +39,7 @@ def news_hard_delete_sync():
                 cur.execute("SELECT article_id, deleted_at FROM article_deleted")
                 deleted_rows = cur.fetchall()
 
-        if not deleted_rows:
-            return 0
-
-        with get_conn("dwh") as dwh_conn:
-            with dwh_conn.cursor() as cur:
-                for row in deleted_rows:
-                    cur.execute(
-                        """
-                        UPDATE news_raw.articles_raw
-                        SET is_hard_deleted = TRUE, deleted_at = %(deleted_at)s
-                        WHERE id = %(article_id)s
-                        """,
-                        row,
-                    )
+        dwh.mark_hard_deleted([dict(r) for r in deleted_rows])
         return len(deleted_rows)
 
     reconcile()

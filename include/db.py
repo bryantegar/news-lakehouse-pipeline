@@ -5,11 +5,12 @@ Kept deliberately dumb: one function per database, so swapping the
 local Postgres DWH for real BigQuery later means editing *this file
 only* (or just setting env vars), never the DAGs or the Spark job.
 """
-import os
 import datetime as dt
+import os
+from contextlib import contextmanager
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from contextlib import contextmanager
 
 
 @contextmanager
