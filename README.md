@@ -1,3 +1,5 @@
+![CI](https://github.com/bryantegar/news-lakehouse-pipeline/actions/workflows/ci.yml/badge.svg)
+
 # news-lakehouse-pipeline
 
 A lakehouse-style ETL pipeline for a news portal: **GCS-style landing
@@ -194,7 +196,6 @@ something in this repo — see the table in
 Hadoop/MapReduce and a real multi-node Spark cluster are the two
 intentionally-out-of-scope items — reasoning in that doc.
 
-![CI](https://github.com/bryantegar/news-lakehouse-pipeline/actions/workflows/ci.yml/badge.svg)
 
 ## What's intentionally not included
 
