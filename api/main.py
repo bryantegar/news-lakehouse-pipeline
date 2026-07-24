@@ -16,7 +16,7 @@ Or via the bundled service:
     open http://localhost:8000/docs
 """
 from typing import Optional
-
+from auth import require_api_key
 from db import get_cursor
 from dependencies import get_article_repository, get_author_repository, get_dq_repository
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -51,7 +51,7 @@ def health():
         return HealthCheck(status="degraded", dwh_reachable=False)
 
 
-@app.get("/articles", response_model=ArticlePage, tags=["articles"])
+@app.get("/articles", response_model=ArticlePage, tags=["articles"], dependencies=[Depends(require_api_key)])
 def list_articles(
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -62,7 +62,7 @@ def list_articles(
     return ArticlePage(items=items, limit=limit, offset=offset, total=total)
 
 
-@app.get("/articles/{article_id}", response_model=Article, tags=["articles"])
+@app.get("/articles/{article_id}", response_model=Article, tags=["articles"], dependencies=[Depends(require_api_key)])
 def get_article(article_id: int, repo: ArticleRepository = Depends(get_article_repository)):
     row = repo.get_article(article_id)
     if not row:
@@ -70,7 +70,7 @@ def get_article(article_id: int, repo: ArticleRepository = Depends(get_article_r
     return row
 
 
-@app.get("/authors", response_model=list[Author], tags=["authors"])
+@app.get("/authors", response_model=list[Author], tags=["authors"], dependencies=[Depends(require_api_key)])
 def list_authors(
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -79,7 +79,7 @@ def list_authors(
     return repo.list_authors(limit=limit, offset=offset)
 
 
-@app.get("/authors/{author_id}", response_model=Author, tags=["authors"])
+@app.get("/authors/{author_id}", response_model=Author, tags=["authors"], dependencies=[Depends(require_api_key)])
 def get_author(author_id: int, repo: AuthorRepository = Depends(get_author_repository)):
     row = repo.get_author(author_id)
     if not row:
@@ -87,7 +87,7 @@ def get_author(author_id: int, repo: AuthorRepository = Depends(get_author_repos
     return row
 
 
-@app.get("/dq-scorecard/latest", response_model=DQScorecard, tags=["data-quality"])
+@app.get("/dq-scorecard/latest", response_model=DQScorecard, tags=["data-quality"], dependencies=[Depends(require_api_key)])
 def latest_dq_scorecard(repo: DQRepository = Depends(get_dq_repository)):
     row = repo.latest()
     if not row:
@@ -95,7 +95,7 @@ def latest_dq_scorecard(repo: DQRepository = Depends(get_dq_repository)):
     return row
 
 
-@app.get("/dq-scorecard/history", response_model=list[DQScorecard], tags=["data-quality"])
+@app.get("/dq-scorecard/history", response_model=list[DQScorecard], tags=["data-quality"],dependencies=[Depends(require_api_key)])
 def dq_scorecard_history(
     limit: int = Query(10, ge=1, le=100),
     repo: DQRepository = Depends(get_dq_repository),

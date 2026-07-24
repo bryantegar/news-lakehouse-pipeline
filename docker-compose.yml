@@ -138,6 +138,7 @@ services:
       DWH_DB_NAME: news_dwh
       DWH_DB_USER: news
       DWH_DB_PASSWORD: news
+      API_KEY: ${API_KEY:-}
     ports:
       - "8000:8000"   # Swagger docs: http://localhost:8000/docs
     depends_on:
