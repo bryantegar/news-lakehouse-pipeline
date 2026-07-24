@@ -1,0 +1,31 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+# dbt compiles its own generated SQL-adjacent Python under target/ — never lint generated output.
+exclude = ["dbt/target", "dbt/logs", "**/__pycache__"]
+
+[tool.ruff.lint]
+# E: pycodestyle errors, F: pyflakes (catches exactly the kind of
+# "imported name doesn't exist" bug that broke news_ingestion_hourly.py),
+# I: import sorting, B: flake8-bugbear (catches common footguns like
+# mutable default args, broad excepts used as control flow).
+select = ["E", "F", "I", "B"]
+ignore = [
+    "E402",  # module-level imports after sys.path.append — required by the
+             # /opt/airflow/include sys.path pattern used across all DAGs.
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Airflow's @dag/@task decorator pattern defines tasks as nested closures
+# inside the DAG factory function — triggers bugbear's "function too
+# complex" noise for a pattern that's idiomatic here, not a real issue.
+"dags/*.py" = ["B008"]
+# FastAPI's Depends(...) in a default argument is the framework's
+# documented dependency-injection pattern, not the "mutable default
+# argument" footgun B008 exists to catch — Depends() is evaluated once
+# per request by FastAPI's own resolver, not at function-definition time.
+"api/main.py" = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["dags", "include"]

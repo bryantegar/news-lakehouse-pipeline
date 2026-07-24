@@ -17,13 +17,12 @@ Or via the bundled service:
 """
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, Depends
-from fastapi.middleware.cors import CORSMiddleware
-
-from schemas import Article, ArticlePage, Author, DQScorecard, HealthCheck
-from repositories import ArticleRepository, AuthorRepository, DQRepository
-from dependencies import get_article_repository, get_author_repository, get_dq_repository
 from db import get_cursor
+from dependencies import get_article_repository, get_author_repository, get_dq_repository
+from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from repositories import ArticleRepository, AuthorRepository, DQRepository
+from schemas import Article, ArticlePage, Author, DQScorecard, HealthCheck
 
 app = FastAPI(
     title="news-lakehouse-pipeline API",

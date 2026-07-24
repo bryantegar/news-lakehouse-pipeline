@@ -8,21 +8,32 @@ from __future__ import annotations
 
 
 def age_group(age) -> str:
-    if age is None:    return "Unknown"
-    if age < 18:       return "<18"
-    if age < 25:       return "18-24"
-    if age < 35:       return "25-34"
-    if age < 45:       return "35-44"
-    if age < 55:       return "45-54"
+    if age is None:
+        return "Unknown"
+    if age < 18:
+        return "<18"
+    if age < 25:
+        return "18-24"
+    if age < 35:
+        return "25-34"
+    if age < 45:
+        return "35-44"
+    if age < 55:
+        return "45-54"
     return "55+"
 
 
 def follower_tier(n) -> str:
-    if n is None:          return "nano"
-    if n < 10_000:         return "nano"
-    if n < 100_000:        return "micro"
-    if n < 500_000:        return "mid"
-    if n < 1_000_000:      return "macro"
+    if n is None:
+        return "nano"
+    if n < 10_000:
+        return "nano"
+    if n < 100_000:
+        return "micro"
+    if n < 500_000:
+        return "mid"
+    if n < 1_000_000:
+        return "macro"
     return "mega"
 
 
@@ -31,10 +42,13 @@ def edu_level(edu) -> int:
 
 
 def device_class(device) -> str:
-    if not device:          return "unknown"
+    if not device:
+        return "unknown"
     d = device.lower()
-    if "mobile" in d:       return "mobile"
-    if "tablet" in d:       return "tablet"
+    if "mobile" in d:
+        return "mobile"
+    if "tablet" in d:
+        return "tablet"
     return "desktop"
 
 

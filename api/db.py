@@ -7,9 +7,10 @@ the DWH marts — it has no reason to know about the source DB or the
 lake. A real production setup would point DWH_DB_* at a read replica.
 """
 import os
+from contextlib import contextmanager
+
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
-from contextlib import contextmanager
 
 _pool = pool.SimpleConnectionPool(
     minconn=1,

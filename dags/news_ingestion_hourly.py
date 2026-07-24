@@ -8,27 +8,30 @@ raw lands untouched, PySpark does row-level cleaning (bronze -> silver),
 dbt does business-logic modeling (silver -> gold marts).
 """
 from __future__ import annotations
+
 import datetime as dt
 import io
 import json
+import os
 import sys
 
-import os
 import pyarrow as pa
 import pyarrow.parquet as pq
 from airflow.decorators import dag, task
 from airflow.operators.bash import BashOperator
 
 sys.path.append("/opt/airflow/include")
-from db import get_conn, get_watermark, set_watermark  # noqa: E402
-from lake_storage import upload_bytes, download_bytes  # noqa: E402
-from alerts import notify_failure  # noqa: E402
+import dwh  # noqa: E402  — DWH operations, backend-agnostic (postgres or bigquery)
+from alerts import notify_dq_anomaly, notify_failure, notify_scrape_report  # noqa: E402
+from anomaly import detect as detect_dq_anomaly  # noqa: E402
+from db import get_conn  # noqa: E402  — SOURCE DB only; always Postgres, never swapped
+from lake_storage import download_bytes, upload_bytes  # noqa: E402
 
 LOCAL_LANDING = "/tmp/lake/landing_latest"
 LOCAL_CLEANED = "/tmp/lake/cleaned_latest"
 
 PIPELINE_NAME = "articles_etl_hourly"
-BUCKET = "news-lakehouse"
+BUCKET = os.environ.get("LAKE_BUCKET", "news-lakehouse")
 
 default_args = {"on_failure_callback": notify_failure}
 
@@ -52,7 +55,7 @@ def news_ingestion_hourly():
         strategy from the original assessment doc. Store: write raw
         parquet to the lake.
         """
-        since = get_watermark(PIPELINE_NAME)
+        since = dwh.get_watermark(PIPELINE_NAME)
         extraction_ts = dt.datetime.utcnow()
 
         with get_conn("source") as conn:
@@ -80,7 +83,7 @@ def news_ingestion_hourly():
         upload_bytes(BUCKET, key, buf.getvalue())
 
         # Watermark only advances after the extraction window closes (idempotent re-runs).
-        set_watermark(PIPELINE_NAME, extraction_ts)
+        dwh.set_watermark(PIPELINE_NAME, extraction_ts)
         return key
 
     @task
@@ -116,49 +119,65 @@ def news_ingestion_hourly():
                     upload_bytes(BUCKET, key, f.read())
 
     @task
-    def load_to_dwh_and_dq():
+    def load_to_dwh_and_dq() -> dict:
         """Load cleaned parquet + scorecard into the DWH (news_raw schema)."""
         table = pq.read_table(LOCAL_CLEANED)
         rows = table.to_pylist()
 
-        with get_conn("dwh") as conn:
-            with conn.cursor() as cur:
-                for r in rows:
-                    cur.execute(
-                        """
-                        INSERT INTO news_raw.articles_raw
-                        (id, title, content, author_id, author_name, category,
-                         published_at, created_at, updated_at, deleted_at, is_hard_deleted)
-                        VALUES (%(id)s, %(title)s, %(content)s, %(author_id)s, %(author_name)s,
-                                %(category)s, %(published_at)s, %(created_at)s, %(updated_at)s,
-                                %(deleted_at)s, %(is_hard_deleted)s)
-                        """,
-                        r,
-                    )
+        dwh.insert_articles_raw(rows)
 
-            with open("/tmp/lake/dq_scorecard.json") as f:
-                s = json.load(f)
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO news_dwh.dq_scorecard
-                    (data_source, table_name, completeness, accuracy, consistency,
-                     timeliness, validity, uniqueness, overall_score)
-                    VALUES ('lake', %(table_name)s, %(completeness)s, %(accuracy)s,
-                            %(consistency)s, %(timeliness)s, %(validity)s, %(uniqueness)s,
-                            %(overall_score)s)
-                    """,
-                    s,
-                )
+        with open("/tmp/lake/dq_scorecard.json") as f:
+            scorecard = json.load(f)
+        dwh.insert_dq_scorecard(scorecard)
+
+        batch_counts: dict = {}
+        for r in rows:
+            cat = r.get("category") or "(tanpa kategori)"
+            batch_counts[cat] = batch_counts.get(cat, 0) + 1
+        return batch_counts
+
+    @task
+    def check_dq_anomaly():
+        """
+        Observe: compare this run's DQ score against the rolling history
+        of past runs. Separate from the hard `< 0.85` dbt test — this
+        catches a score that's still technically fine but unusual
+        compared to recent runs (e.g. a sharp drop that hasn't crossed
+        the failure line yet).
+        """
+        rows = dwh.get_dq_history(limit=21)
+        if not rows:
+            return
+        latest, history = rows[0], rows[1:]
+
+        is_anomaly, z_score = detect_dq_anomaly(history, latest)
+        notify_dq_anomaly(
+            {"overall_score": latest, "table_name": "articles"}, is_anomaly, z_score
+        )
 
     dbt_run = BashOperator(
         task_id="dbt_run_and_test",
         bash_command="cd /opt/airflow/dbt && dbt run && dbt snapshot && dbt test",
     )
 
+    @task(trigger_rule="all_done")  # send the report even if dbt_test only WARNed/failed on a non-blocking test
+    def send_scrape_report(batch_counts: dict | None):
+        batch_counts = batch_counts or {}
+        total_counts = dwh.get_category_totals()
+        notify_scrape_report(batch_counts, total_counts, dt.datetime.utcnow())
+
     landed_key = extract_and_land()
     local_path = download_for_spark(landed_key)
-    local_path >> spark_clean >> upload_cleaned_to_lake() >> load_to_dwh_and_dq() >> dbt_run
+    dwh_result = load_to_dwh_and_dq()
+    (
+        local_path
+        >> spark_clean
+        >> upload_cleaned_to_lake()
+        >> dwh_result
+        >> check_dq_anomaly()
+        >> dbt_run
+        >> send_scrape_report(dwh_result)
+    )
 
 
 news_ingestion_hourly()

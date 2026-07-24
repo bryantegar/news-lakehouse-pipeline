@@ -17,12 +17,12 @@ the Spark job) needs to know which one is active.
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
 import logging
 import os
 import random
 import time
-import datetime as dt
 from typing import Iterator
 
 from faker import Faker
@@ -42,7 +42,7 @@ def _fetch_fixture(since: dt.datetime, n: int = 50) -> list[dict]:
         since = now - dt.timedelta(hours=1)  # safety: never let the window collapse/invert
 
     rows = []
-    for i in range(n):
+    for _ in range(n):
         offset_minutes = random.randint(1, 500)
         created = since + dt.timedelta(minutes=offset_minutes)
         created = min(created, now)  # never generate a future-published article

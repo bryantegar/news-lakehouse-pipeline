@@ -5,8 +5,12 @@ BigQuery later means adding BigQueryArticleRepository in repositories.py
 and changing the three lines below — nothing in routes.py changes.
 """
 from repositories import (
-    ArticleRepository, AuthorRepository, DQRepository,
-    PostgresArticleRepository, PostgresAuthorRepository, PostgresDQRepository,
+    ArticleRepository,
+    AuthorRepository,
+    DQRepository,
+    PostgresArticleRepository,
+    PostgresAuthorRepository,
+    PostgresDQRepository,
 )
 
 _article_repo = PostgresArticleRepository()

@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same branch/PR instead of letting them
+# queue up and burn minutes on commits nobody cares about anymore.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff==0.5.5
+
+      - name: Run ruff
+        run: ruff check dags include api tests
+
+  test:
+    name: Unit tests (dags + include)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build from the exact same Dockerfile that ships to production —
+      # so a test pass here means "this actually works in the real
+      # Airflow environment", not just "works in some generic CI venv"
+      # with a different Python/Airflow version than production runs.
+      - name: Build Airflow image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.airflow
+          tags: news-lakehouse-airflow:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Mount dags/include/tests at the exact paths the DAGs expect
+      # (sys.path.append("/opt/airflow/include")) — the same layout
+      # docker-compose.yml uses, so this test run mirrors production
+      # import behavior instead of a lookalike CI-only path setup.
+      - name: Run pytest inside the Airflow image
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/dags:/opt/airflow/dags" \
+            -v "${{ github.workspace }}/include:/opt/airflow/include" \
+            -v "${{ github.workspace }}/tests:/opt/airflow/tests" \
+            -v "${{ github.workspace }}/pyproject.toml:/opt/airflow/pyproject.toml" \
+            -w /opt/airflow \
+            news-lakehouse-airflow:ci \
+            bash -c "pip install --no-cache-dir --user pytest==8.3.2 pytest-mock==3.14.0 && python -m pytest tests/unit -v"
+
+  api-build-check:
+    name: API Docker build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # NOTE: this only proves the image builds (deps resolve, Dockerfile
+      # is valid) — it does NOT import-test main.py, because api/db.py
+      # currently opens a real psycopg2 connection pool at module import
+      # time, which needs a live Postgres to even construct. Upgrade this
+      # to a real import/smoke test once that's made lazy (see PR notes).
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api
+          file: ./api/Dockerfile
+          tags: news-lakehouse-api:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
