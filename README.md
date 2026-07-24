@@ -194,6 +194,8 @@ something in this repo — see the table in
 Hadoop/MapReduce and a real multi-node Spark cluster are the two
 intentionally-out-of-scope items — reasoning in that doc.
 
+![CI](https://github.com/bryantegar/news-lakehouse-pipeline/actions/workflows/ci.yml/badge.svg)
+
 ## What's intentionally not included
 
 - **CDC** (Debezium/WAL streaming) — watermark + delete-trigger covers
