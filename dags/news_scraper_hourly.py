@@ -10,6 +10,7 @@ source DB / hard-delete trigger / watermark-on-updated_at pattern
 actually meaningful.
 """
 from __future__ import annotations
+
 import datetime as dt
 import sys
 
@@ -17,9 +18,9 @@ from airflow.decorators import dag, task
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 sys.path.append("/opt/airflow/include")
+from alerts import notify_failure  # noqa: E402
 from db import get_conn, get_watermark, set_watermark  # noqa: E402
 from scraper import fetch_new_or_updated  # noqa: E402
-from alerts import notify_failure  # noqa: E402
 
 PIPELINE_NAME = "kumparan_scraper"
 default_args = {"on_failure_callback": notify_failure}

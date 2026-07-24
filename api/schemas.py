@@ -6,6 +6,7 @@ hand-maintained in a separate doc that goes stale.
 """
 from datetime import date, datetime
 from typing import Optional
+
 from pydantic import BaseModel
 
 
