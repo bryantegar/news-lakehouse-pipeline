@@ -1,6 +1,5 @@
 """
 news_scraper_hourly.py
-
 Ingest step, stage 1: scrape (live kumparan.com or local fixture) and
 UPSERT into the source OLTP DB. This mirrors the earlier kumparan-de-final
 design — the scraper is a source system in its own right, separate from
@@ -20,7 +19,7 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 sys.path.append("/opt/airflow/include")
 from alerts import notify_failure  # noqa: E402
 from db import get_conn, get_watermark, set_watermark  # noqa: E402
-from scraper import fetch_new_or_updated  # noqa: E402
+from scraper import get_scraper  # noqa: E402
 
 PIPELINE_NAME = "kumparan_scraper"
 default_args = {"on_failure_callback": notify_failure}
@@ -36,14 +35,18 @@ default_args = {"on_failure_callback": notify_failure}
     tags=["ingestion", "scraper"],
 )
 def news_scraper_hourly():
-
     @task
     def scrape_and_upsert():
         since = get_watermark(PIPELINE_NAME)
-        rows = fetch_new_or_updated(since)
+
+        # get_scraper() reads SCRAPER_MODE once and returns the matching
+        # BaseScraper implementation (FixtureScraper or KumparanScraper) —
+        # this task doesn't know or care which one it got.
+        scraper = get_scraper()
+        rows = scraper.fetch_new_or_updated(since)
+
         if not rows:
             return 0
-
         with get_conn("source") as conn:
             with conn.cursor() as cur:
                 for r in rows:
@@ -66,7 +69,6 @@ def news_scraper_hourly():
                         """,
                         r,
                     )
-
         max_published = max(r["published_at"] for r in rows if r.get("published_at"))
         set_watermark(PIPELINE_NAME, max_published)
         return len(rows)
