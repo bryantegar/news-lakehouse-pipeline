@@ -16,6 +16,7 @@ Or via the bundled service:
     open http://localhost:8000/docs
 """
 from typing import Optional
+
 from auth import require_api_key
 from db import get_cursor
 from dependencies import get_article_repository, get_author_repository, get_dq_repository
@@ -87,7 +88,12 @@ def get_author(author_id: int, repo: AuthorRepository = Depends(get_author_repos
     return row
 
 
-@app.get("/dq-scorecard/latest", response_model=DQScorecard, tags=["data-quality"], dependencies=[Depends(require_api_key)])
+@app.get(
+    "/dq-scorecard/latest",
+    response_model=DQScorecard,
+    tags=["data-quality"],
+    dependencies=[Depends(require_api_key)],
+)
 def latest_dq_scorecard(repo: DQRepository = Depends(get_dq_repository)):
     row = repo.latest()
     if not row:
@@ -95,7 +101,12 @@ def latest_dq_scorecard(repo: DQRepository = Depends(get_dq_repository)):
     return row
 
 
-@app.get("/dq-scorecard/history", response_model=list[DQScorecard], tags=["data-quality"],dependencies=[Depends(require_api_key)])
+@app.get(
+    "/dq-scorecard/history",
+    response_model=list[DQScorecard],
+    tags=["data-quality"],
+    dependencies=[Depends(require_api_key)],
+)
 def dq_scorecard_history(
     limit: int = Query(10, ge=1, le=100),
     repo: DQRepository = Depends(get_dq_repository),

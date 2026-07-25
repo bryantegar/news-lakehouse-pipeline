@@ -11,8 +11,8 @@ If API_KEY is unset, auth is disabled entirely (so local dev / first
 run never breaks because of a missing key) — a warning is logged once
 at import time so the gap is visible, not silent.
 """
-import os
 import logging
+import os
 
 from fastapi import Header, HTTPException
 
