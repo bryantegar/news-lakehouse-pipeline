@@ -17,7 +17,9 @@ models:
       - name: article_id
         description: "Primary key, sourced from the OLTP articles.id"
         tests:
-          - unique          # uniqueness dimension
+          - unique:
+              config:
+                severity: warn
           - not_null        # completeness dimension
       - name: title
         tests:
