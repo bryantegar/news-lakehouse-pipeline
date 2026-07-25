@@ -22,6 +22,11 @@ x-airflow-common: &airflow-common
     LAKE_SECRET_KEY: minioadmin
     SCRAPER_MODE: fixture
     SLACK_WEBHOOK_URL: ""   # optional — set to a real Slack incoming webhook URL to enable alerts
+    SMTP_HOST: "smtp.gmail.com"              # optional — e.g. smtp.gmail.com
+    SMTP_PORT: "587"
+    SMTP_USER: "vincentrumt@gmail.com"
+    SMTP_PASSWORD: "yjykzjelypplrafo"
+    ALERT_EMAIL_TO: "bryantegarm@gmail.com"         # optional — recipient address
   volumes:
     - ./dags:/opt/airflow/dags
     - ./include:/opt/airflow/include
