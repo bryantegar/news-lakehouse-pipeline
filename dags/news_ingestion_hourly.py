@@ -161,7 +161,7 @@ def news_ingestion_hourly():
     )
 
     @task(trigger_rule="all_done")  # send the report even if dbt_test only WARNed/failed on a non-blocking test
-    def send_scrape_report(batch_counts: dict | None):
+    def send_scrape_report(batch_counts: dict):
         batch_counts = batch_counts or {}
         total_counts = dwh.get_category_totals()
         notify_scrape_report(batch_counts, total_counts, dt.datetime.utcnow())
