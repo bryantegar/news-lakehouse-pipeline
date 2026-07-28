@@ -205,12 +205,3 @@ intentionally-out-of-scope items — reasoning in that doc.
 - **Full DataHub stack** — not bundled in the default `docker-compose.yml`
   because it needs Kafka + Elasticsearch + MySQL and isn't worth the RAM
   for a demo. `include/datahub_ingest.py` documents how to wire it up.
-
-## Status / next steps
-
-- [ ] CI (GitHub Actions): lint + `dbt test` on push
-- [ ] Slack alert on DAG/DQ failure
-- [ ] Extra kumparan fields (engagement stats, publisher info) — dropped
-      for now to keep the schema aligned across scraper/Spark/dbt; add
-      them to `sql/01_source_ddl.sql` + `include/scraper.py` + the dbt
-      models together if you want them
