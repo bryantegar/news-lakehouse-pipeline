@@ -1,0 +1,35 @@
+# source_postgres.yml
+#
+# Ingests table/column metadata from the source OLTP database
+# (postgres-source / news_source) into DataHub.
+#
+# Run against the port exposed in docker-compose.yml (5433), not the
+# in-network hostname — this recipe runs from the host machine via the
+# standalone `datahub` CLI, not from inside the project's docker
+# network, so it reaches Postgres the same way `psql -h localhost -p
+# 5433` would.
+#
+# Usage:
+#   datahub ingest -c datahub/recipes/source_postgres.yml
+
+source:
+  type: postgres
+  config:
+    host_port: "${SOURCE_DB_HOST:-localhost}:${SOURCE_DB_INGEST_PORT:-5433}"
+    database: ${SOURCE_DB_NAME:-news_source}
+    username: ${SOURCE_DB_USER:-news}
+    password: ${SOURCE_DB_PASSWORD:-news}
+
+    include_tables: true
+    include_views: true
+    profiling:
+      enabled: false  # keep ingestion fast — table/column metadata only, no row-level stats
+
+    schema_pattern:
+      allow:
+        - "public"
+
+sink:
+  type: datahub-rest
+  config:
+    server: "${DATAHUB_GMS_URL:-http://localhost:8080}"

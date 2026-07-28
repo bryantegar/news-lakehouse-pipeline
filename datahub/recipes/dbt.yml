@@ -1,0 +1,34 @@
+# dbt.yml
+#
+# Ingests dbt's own metadata — model lineage (staging -> marts),
+# column-level descriptions from schema.yml, and test results — into
+# DataHub. This is what turns DataHub from "here are some tables" into
+# "here's how stg_articles becomes fct_articles, and here's which dbt
+# tests are attached to each column."
+#
+# Requires a `dbt run` (or at least `dbt compile`) to have produced
+# target/manifest.json first — this recipe reads dbt's own build
+# artifacts, it doesn't re-run dbt itself.
+#
+# Usage:
+#   cd dbt && dbt compile   # produces target/manifest.json if not already run
+#   datahub ingest -c ../datahub/recipes/dbt.yml
+
+source:
+  type: dbt
+  config:
+    manifest_path: "${DBT_TARGET_DIR:-./dbt/target}/manifest.json"
+    catalog_path: "${DBT_TARGET_DIR:-./dbt/target}/catalog.json"
+
+    # The warehouse dbt actually built against — must match dbt/profiles.yml.example's
+    # target. Switch to "bigquery" for the production profile.
+    target_platform: postgres
+
+    # load_schemas: true
+    enable_meta_mapping: true      # picks up any dbt meta: {} blocks as DataHub properties
+    enable_query_tag_mapping: true
+
+sink:
+  type: datahub-rest
+  config:
+    server: "${DATAHUB_GMS_URL:-http://localhost:8080}"

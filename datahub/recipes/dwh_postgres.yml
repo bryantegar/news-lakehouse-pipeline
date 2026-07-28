@@ -1,0 +1,35 @@
+# dwh_postgres.yml
+#
+# Ingests table/column metadata from the warehouse database
+# (postgres-dwh / news_dwh) into DataHub — covers all three medallion
+# layers that live in this one database in local/dev mode
+# (news_raw, news_dwh, news_mart). When DWH_BACKEND=bigquery in
+# production, use dwh_bigquery.yml instead (same shape, different
+# source type) — see docs/architecture.md.
+#
+# Usage:
+#   datahub ingest -c datahub/recipes/dwh_postgres.yml
+
+source:
+  type: postgres
+  config:
+    host_port: "${DWH_DB_HOST:-localhost}:${DWH_DB_INGEST_PORT:-5434}"
+    database: ${DWH_DB_NAME:-news_dwh}
+    username: ${DWH_DB_USER:-news}
+    password: ${DWH_DB_PASSWORD:-news}
+
+    include_tables: true
+    include_views: true
+    profiling:
+      enabled: false
+
+    schema_pattern:
+      allow:
+        - "news_raw"
+        - "news_dwh"
+        - "news_mart"
+
+sink:
+  type: datahub-rest
+  config:
+    server: "${DATAHUB_GMS_URL:-http://localhost:8080}"
