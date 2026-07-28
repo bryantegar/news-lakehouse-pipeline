@@ -159,6 +159,22 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  metabase-provision:
+    build:
+      context: ./metabase
+    environment:
+      MB_URL: http://metabase:3000
+      MB_ADMIN_EMAIL: ${MB_ADMIN_EMAIL:-}
+      MB_ADMIN_PASSWORD: ${MB_ADMIN_PASSWORD:-}
+      DWH_DB_HOST: postgres-dwh
+      DWH_DB_PORT: 5432
+      DWH_DB_NAME: news_dwh
+      DWH_DB_USER: news
+      DWH_DB_PASSWORD: news
+    depends_on:
+      - metabase
+    restart: "no"
+
 volumes:
   pg-source-data:
   pg-dwh-data:
